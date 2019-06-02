@@ -13,7 +13,7 @@ var JSONStream   = require ('./streams').JSONStream;
 
 var parseError = require ('./parse-error');
 
-var NATIVE_HTTP_OPTIONS = require ('./consts').NATIVE_HTTP_OPTIONS
+var LIBRARY_SPECIFIC_OPTIONS = require ('./consts').LIBRARY_SPECIFIC_OPTIONS;
 
 function httpResponseHandler (stream, reqParams, reqData, cb, response) {
 	var str;
@@ -216,13 +216,19 @@ function ClickHouse (options) {
 }
 
 ClickHouse.prototype.getReqParams = function () {
+	// avoid to set defaults - node http module is not happy
+	var reqParamNames = Object.keys(this.options)
+		.filter(function(name) {
+			return !LIBRARY_SPECIFIC_OPTIONS.has(name);
+		});
+
 	var urlObject = {};
 
-	// avoid to set defaults - node http module is not happy
-	NATIVE_HTTP_OPTIONS.forEach (function (k) {
-		if (this.options.hasOwnProperty(k))
-			urlObject[k] = this.options[k];
-	}, this);
+	for (var i = 0; i < reqParamNames.length; i++) {
+		var name = reqParamNames[i];
+		urlObject[name] = this.options[name];
+	}
+
 	if (this.options.hasOwnProperty('user') || this.options.hasOwnProperty('password')) {
 		urlObject.auth = encodeURIComponent(this.options.user || 'default')
 			+ ':'
